@@ -13,8 +13,8 @@ app.use(cors());
 app.use(express.json());
 
 const verifyJWT = (req, res, next) => {
-  console.log("hitting verify JWT");
-  console.log(req.headers.authorization);
+  // console.log("hitting verify JWT");
+  // console.log(req.headers.authorization);
   const authorization = req.headers.authorization;
   if (!authorization) {
     return res
@@ -58,7 +58,9 @@ async function run() {
       .db("arts-adventure")
       .collection("selectCourse");
     const usersCollection = client.db("arts-adventure").collection("users");
-    const paymentCollection = client.db("arts-adventure").collection("payments");
+    const paymentCollection = client
+      .db("arts-adventure")
+      .collection("payments");
 
     // jwt related apis
     app.post("/jwt", (req, res) => {
@@ -115,10 +117,10 @@ async function run() {
 
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-      console.log(user);
+      // console.log(user);
       const result = { admin: user?.role === "admin" };
       res.send(result);
-      console.log(result);
+      // console.log(result);
     });
 
     app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
@@ -133,7 +135,7 @@ async function run() {
       console.log(user);
       const result = { instructor: user?.role === "instructor" };
       res.send(result);
-      console.log(result);
+      // console.log(result);
     });
 
     app.get("/users/student/:email", verifyJWT, async (req, res) => {
@@ -145,10 +147,10 @@ async function run() {
 
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-      console.log(user);
+      // console.log(user);
       const result = { student: user?.role === "student" };
       res.send(result);
-      console.log(result);
+      // console.log(result);
     });
 
     app.patch("/users/admin/:id", async (req, res) => {
@@ -234,20 +236,70 @@ async function run() {
     });
 
     // payment related apis
+    // app.post("/payments", verifyJWT, async (req, res) => {
+    //   const payment = req.body;
+    //   const insertResult = await paymentCollection.insertOne(payment);
+
+    //   const selectCourseId = payment.selectCourseItems[0];
+    //   console.log("payment", payment);
+    //   const query = {
+    //     _id: new ObjectId(selectCourseId),
+    //   };
+    //   const deleteResult = await selectCourseCollection.deleteOne(query);
+
+    //   res.send({ insertResult, deleteResult });
+
+    // });
+
     app.post("/payments", verifyJWT, async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentCollection.insertOne(payment);
 
-      const selectCourseId = payment.selectCourseItems[0];
-      console.log("payment", payment);
-      const query = {
-        _id: new ObjectId(selectCourseId),
+      const deleteQuery = {
+        _id: new ObjectId(payment.selectedClassId),
       };
-      const deleteResult = await selectCourseCollection.deleteOne(query);
+      const deleteResult = await selectCourseCollection.deleteOne(deleteQuery);
 
-      res.send({ insertResult, deleteResult });
+      const updateQuery = {
+        _id: new ObjectId(payment.classId),
+      };
+      const updateResult = await classesCollection.updateOne(updateQuery, {
+        $inc: { enrolled: 1 },
+      });
 
+      const updateSeatsQuery = {
+        _id: new ObjectId(payment.classId),
+      };
+      const updateSeatsResult = await classesCollection.updateOne(
+        updateSeatsQuery,
+        {
+          $inc: { available_seats: -1 },
+        }
+      );
 
+      const classId = payment.classId;
+      const query = { _id: new ObjectId(classId) };
+
+      const classData = await classesCollection.findOne(query);
+      const instructorEmail = classData.email;
+
+      const updateInstructorQuery = { email: instructorEmail };
+
+      // if instructor has no students field, create one
+      const updateInstructorResult = await usersCollection.updateOne(
+        updateInstructorQuery,
+        {
+          $inc: { students: 1 },
+        }
+      );
+
+      res.send({
+        insertResult,
+        deleteResult,
+        updateResult,
+        updateSeatsResult,
+        updateInstructorResult,
+      });
     });
 
     // Send a ping to confirm a successful connection
