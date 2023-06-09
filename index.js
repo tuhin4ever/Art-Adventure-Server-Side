@@ -58,6 +58,7 @@ async function run() {
       .db("arts-adventure")
       .collection("selectCourse");
     const usersCollection = client.db("arts-adventure").collection("users");
+    const paymentCollection = client.db("arts-adventure").collection("payments");
 
     // jwt related apis
     app.post("/jwt", (req, res) => {
@@ -184,6 +185,13 @@ async function run() {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
+    // instructor related apis
+    // Get Instructors from the database
+    app.get("/instructors", async (req, res) => {
+      const query = { role: "instructor" };
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // course selection related apis
     app.get("/selectCourse", verifyJWT, async (req, res) => {
@@ -213,11 +221,8 @@ async function run() {
     // create payment intent
     app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const { price } = req.body;
-      if (!price || price <= 1) {
-        return res.status(400).send({ error: "Invalid Price" });
-      }
       const amount = price * 100;
-      // console.log(price ,amount)
+      console.log(price, amount);
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
@@ -233,12 +238,16 @@ async function run() {
       const payment = req.body;
       const insertResult = await paymentCollection.insertOne(payment);
 
+      const selectCourseId = payment.selectCourseItems[0];
+      console.log("payment", payment);
       const query = {
-        _id: { $in: payment.cartItems.map((id) => new ObjectId(id)) },
+        _id: new ObjectId(selectCourseId),
       };
-      const deleteResult = await cartCollection.deleteMany(query);
+      const deleteResult = await selectCourseCollection.deleteOne(query);
 
       res.send({ insertResult, deleteResult });
+
+
     });
 
     // Send a ping to confirm a successful connection
