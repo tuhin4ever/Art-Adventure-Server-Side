@@ -187,6 +187,7 @@ async function run() {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
+    
     // instructor related apis
     // Get Instructors from the database
     app.get("/instructors", async (req, res) => {
@@ -217,6 +218,14 @@ async function run() {
       const item = req.body;
       // console.log(item);
       const result = await selectCourseCollection.insertOne(item);
+      res.send(result);
+    });
+
+    // delete selectCourse
+    app.delete("/selectCourse/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await selectCourseCollection.deleteOne(query);
       res.send(result);
     });
 
