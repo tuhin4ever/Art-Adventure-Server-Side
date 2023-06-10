@@ -187,7 +187,17 @@ async function run() {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
-    
+
+    app.get("/popularClasses", async (req, res) => {
+      const query = { status: "approved" };
+      const options = { sort: { enrolled: -1 } };
+      const result = await classesCollection
+        .find(query, options)
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
     // instructor related apis
     // Get Instructors from the database
     app.get("/instructors", async (req, res) => {
