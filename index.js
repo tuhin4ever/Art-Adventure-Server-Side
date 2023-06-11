@@ -65,7 +65,7 @@ async function run() {
     // jwt related apis
     app.post("/jwt", (req, res) => {
       const user = req.body;
-      console.log(user);
+      // console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "1h",
       });
@@ -243,7 +243,7 @@ async function run() {
     app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const { price } = req.body;
       const amount = price * 100;
-      console.log(price, amount);
+      // console.log(price, amount);
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
@@ -253,22 +253,6 @@ async function run() {
         clientSecret: paymentIntent.client_secret,
       });
     });
-
-    // payment related apis
-    // app.post("/payments", verifyJWT, async (req, res) => {
-    //   const payment = req.body;
-    //   const insertResult = await paymentCollection.insertOne(payment);
-
-    //   const selectCourseId = payment.selectCourseItems[0];
-    //   console.log("payment", payment);
-    //   const query = {
-    //     _id: new ObjectId(selectCourseId),
-    //   };
-    //   const deleteResult = await selectCourseCollection.deleteOne(query);
-
-    //   res.send({ insertResult, deleteResult });
-
-    // });
 
     app.post("/payments", verifyJWT, async (req, res) => {
       const payment = req.body;
@@ -319,6 +303,43 @@ async function run() {
         updateSeatsResult,
         updateInstructorResult,
       });
+    });
+
+    // Get paid classes from the database by email
+    app.get("/paidClasses", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        return res.status(401).send("Unauthorized Access");
+      }
+
+      const decoded = req.decoded;
+      // console.log("came back after verify", decoded);
+      if (decoded.email !== req.query.email) {
+        return res.status(403).send({ error: 1, message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // Get payment history from the database by email sorted by date
+    app.get("/paymentHistory", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        return res.status(401).send("Unauthorized Access");
+      }
+
+      const decoded = req.decoded;
+      console.log("came back after verify", decoded);
+      if (decoded.email !== req.query.email) {
+        return res.status(403).send({ error: 1, message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const options = { sort: { date: -1 } };
+      const result = await paymentCollection.find(query, options).toArray();
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
