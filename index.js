@@ -195,6 +195,34 @@ async function run() {
       res.send(result);
     });
 
+    // Get all classes from the database using jwt and verifyAdmin
+    app.get("/allClasses", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await classesCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Make class status field value to approved jwt and verifyAdmin
+    app.put("/approveClass/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: { status: "approved" },
+      };
+      const result = await classesCollection.updateOne(query, update);
+      res.send(result);
+    });
+
+    // Make class status field value to rejected jwt and verifyAdmin
+    app.put("/rejectClass/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: { status: "rejected" },
+      };
+      const result = await classesCollection.updateOne(query, update);
+      res.send(result);
+    });
+
     // classes related apis
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
@@ -239,12 +267,17 @@ async function run() {
     });
 
     // Get classes by instructor email
-    app.get("/instructorClasses", verifyJWT, verifyInstructor,async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
-      const result = await classesCollection.find(query).toArray();
-      res.send(result);
-    });
+    app.get(
+      "/instructorClasses",
+      verifyJWT,
+      verifyInstructor,
+      async (req, res) => {
+        const email = req.query.email;
+        const query = { email: email };
+        const result = await classesCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
 
     // course selection related apis
     app.get("/selectCourse", verifyJWT, async (req, res) => {
