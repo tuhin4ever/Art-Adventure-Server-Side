@@ -85,6 +85,19 @@ async function run() {
       next();
     };
 
+    // warning: use verifyJWT before using verifyInstructor
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== "instructor") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      next();
+    };
+
     // user related apis
     app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
@@ -190,9 +203,10 @@ async function run() {
 
     app.get("/popularClasses", async (req, res) => {
       const query = { status: "approved" };
-      const options = { sort: { enrolled: -1 } };
+      // const options = { sort: { enrolled: 1 } };
       const result = await classesCollection
-        .find(query, options)
+        .find(query)
+        .sort({ enrolled: -1 })
         .limit(6)
         .toArray();
       res.send(result);
@@ -203,6 +217,32 @@ async function run() {
     app.get("/instructors", async (req, res) => {
       const query = { role: "instructor" };
       const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // Get Popular Instructors from the database
+    app.get("/popularInstructors", async (req, res) => {
+      const query = { role: "instructor" };
+      const options = { sort: { students: -1 } };
+      const result = await usersCollection
+        .find(query, options)
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
+    // Post a new class to the database
+    app.post("/addClass", verifyJWT, verifyInstructor, async (req, res) => {
+      const item = req.body;
+      const result = await classesCollection.insertOne(item);
+      res.send(result);
+    });
+
+    // Get classes by instructor email
+    app.get("/instructorClasses", verifyJWT, verifyInstructor,async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await classesCollection.find(query).toArray();
       res.send(result);
     });
 
