@@ -51,7 +51,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const classesCollection = client.db("arts-adventure").collection("classes");
     const selectCourseCollection = client
@@ -195,37 +195,11 @@ async function run() {
       res.send(result);
     });
 
-    // Get all classes from the database using jwt and verifyAdmin
-    app.get("/allClasses", verifyJWT, verifyAdmin, async (req, res) => {
-      const result = await classesCollection.find().toArray();
-      res.send(result);
-    });
-
-    // Make class status field value to approved jwt and verifyAdmin
-    app.put("/approveClass/:id", verifyJWT, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const update = {
-        $set: { status: "approved" },
-      };
-      const result = await classesCollection.updateOne(query, update);
-      res.send(result);
-    });
-
-    // Make class status field value to rejected jwt and verifyAdmin
-    app.put("/rejectClass/:id", verifyJWT, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const update = {
-        $set: { status: "rejected" },
-      };
-      const result = await classesCollection.updateOne(query, update);
-      res.send(result);
-    });
-
     // classes related apis
     app.get("/classes", async (req, res) => {
-      const result = await classesCollection.find().toArray();
+      const query = { status: "approved" };
+      const result = await classesCollection.find(query).toArray();
+      console.log(result);
       res.send(result);
     });
 
@@ -237,6 +211,35 @@ async function run() {
         .sort({ enrolled: -1 })
         .limit(6)
         .toArray();
+      res.send(result);
+    });
+
+    // Get all classes from the database using jwt and verifyAdmin
+    app.get("/allClasses", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await classesCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Make class status field value to approved jwt and verifyAdmin
+    app.put("/approveClass/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const update = {
+        $set: { status: "approved", feedback: req.body.feedback },
+      };
+      const result = await classesCollection.updateOne(query, update);
+      res.send(result);
+    });
+
+    // Make class status field value to rejected jwt and verifyAdmin
+    app.put("/rejectClass/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: { status: "rejected", feedback: req.body.feedback },
+      };
+      const result = await classesCollection.updateOne(query, update);
       res.send(result);
     });
 
@@ -429,10 +432,10 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
